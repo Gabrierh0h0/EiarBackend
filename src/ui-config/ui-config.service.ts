@@ -11,6 +11,7 @@ export class UiConfigService {
       { key: 'Mision', label: 'Misiones', icon: 'map-outline', visible: true },
       { key: 'Logros', label: 'Logros', icon: 'trophy-outline', visible: true },
       { key: 'Ranking', label: 'Ranking', icon: 'bar-chart-outline', visible: true },
+      { key: 'Mapa', label: 'Mapa', icon: 'map', visible: true },
     ];
 
     return { tabs };
