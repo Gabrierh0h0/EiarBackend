@@ -76,10 +76,40 @@ export class UserProgressService {
             throw new NotFoundException('Usuario no encontrado');
         }
         const data = userDoc.data()!;
+
+        const completedMissions: string[] = data.completedMissions || [];
+        const unlockedLogros: string[] = data.unlockedLogros || [];
+        const totalPoints: number = data.totalPoints || 0;
+
+        // Get total counts from Firestore collections
+        const [misionesSnap, logrosSnap] = await Promise.all([
+            this.firebaseService.db.collection('mision').get(),
+            this.firebaseService.db.collection('logros').get(),
+        ]);
+
+        const totalMissions = misionesSnap.size;
+        const totalLogros = logrosSnap.size;
+        const completedMissionsCount = completedMissions.length;
+        const unlockedLogrosCount = unlockedLogros.length;
+        const pendingMissionsCount = totalMissions - completedMissionsCount;
+        const completedItems = completedMissionsCount + unlockedLogrosCount;
+        const totalItems = totalMissions + totalLogros;
+        const progressPercentage = totalItems > 0
+            ? Math.round((completedItems / totalItems) * 100)
+            : 0;
+
         return {
-            totalPoints: data.totalPoints || 0,
-            completedMissions: data.completedMissions || [],
-            unlockedLogros: data.unlockedLogros || [],
+            totalPoints,
+            completedMissions,
+            unlockedLogros,
+            completedMissionsCount,
+            unlockedLogrosCount,
+            pendingMissionsCount,
+            totalMissions,
+            totalLogros,
+            completedItems,
+            totalItems,
+            progressPercentage,
         };
     }
 
