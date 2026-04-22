@@ -9,6 +9,7 @@ import { MisionesModule } from './misiones/misiones.module';
 import { LogrosModule } from './logros/logros.module';
 import { QrModule } from './qr/qr.module';
 import { UserProgressModule } from './user-progress/user-progress.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -20,8 +21,9 @@ import { UserProgressModule } from './user-progress/user-progress.module';
     LogrosModule,
     QrModule,
     UserProgressModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
