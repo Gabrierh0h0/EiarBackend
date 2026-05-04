@@ -58,7 +58,9 @@ export class UserProgressService {
 
         await userRef.update({
             completedMissions: newCompletedMissions,
+            missionsCompleted: newCompletedMissions,
             totalPoints: newTotalPoints,
+            score: newTotalPoints,
             unlockedLogros: updatedUnlockedLogros,
         });
 
@@ -77,15 +79,60 @@ export class UserProgressService {
         }
         const data = userDoc.data()!;
 
-        const completedMissions: string[] = data.completedMissions || [];
+        const completedMissions: string[] = Array.from(new Set([
+            ...(data.completedMissions || []),
+            ...(data.missionsCompleted || [])
+        ]));
         const unlockedLogros: string[] = data.unlockedLogros || [];
-        const totalPoints: number = data.totalPoints || 0;
+        let totalPoints: number = data.totalPoints || data.score || 0;
 
         // Get total counts from Firestore collections
         const [misionesSnap, logrosSnap] = await Promise.all([
             this.firebaseService.db.collection('mision').get(),
             this.firebaseService.db.collection('logros').get(),
         ]);
+
+        // Calculate accurate real points and auto-unlock achievements
+        let calculatedPoints = 0;
+        let unlockedNewLogros = false;
+
+        misionesSnap.forEach(doc => {
+            if (completedMissions.includes(doc.id)) {
+                calculatedPoints += (doc.data().puntos || 0);
+            }
+        });
+
+        logrosSnap.forEach(doc => {
+            const achievementId = doc.id;
+            const achievementData = doc.data();
+
+            if (unlockedLogros.includes(achievementId)) {
+                calculatedPoints += (achievementData.puntos || 0);
+            } else {
+                // Auto-unlock logic for backward compatibility
+                const requiredMissions: string[] = achievementData.requiredMissions || [];
+                if (requiredMissions.length > 0) {
+                    const isNowUnlocked = requiredMissions.every(reqId => completedMissions.includes(reqId));
+                    if (isNowUnlocked) {
+                        unlockedLogros.push(achievementId);
+                        unlockedNewLogros = true;
+                        calculatedPoints += (achievementData.puntos || 0);
+                    }
+                }
+            }
+        });
+
+        // Sync to DB if there's an inconsistency with old data or new unlocked achievements
+        if (calculatedPoints !== (data.totalPoints || 0) || unlockedNewLogros) {
+            totalPoints = calculatedPoints;
+            await this.firebaseService.db.collection('users').doc(uid).update({
+                totalPoints: calculatedPoints,
+                score: calculatedPoints,
+                completedMissions: completedMissions,
+                missionsCompleted: completedMissions,
+                unlockedLogros: unlockedLogros
+            });
+        }
 
         const totalMissions = misionesSnap.size;
         const totalLogros = logrosSnap.size;
@@ -97,6 +144,8 @@ export class UserProgressService {
         const progressPercentage = totalItems > 0
             ? Math.round((completedItems / totalItems) * 100)
             : 0;
+
+        const myRanking = await this.getMyRanking(uid);
 
         return {
             totalPoints,
@@ -110,6 +159,7 @@ export class UserProgressService {
             completedItems,
             totalItems,
             progressPercentage,
+            rankingPosition: myRanking.position,
         };
     }
 
