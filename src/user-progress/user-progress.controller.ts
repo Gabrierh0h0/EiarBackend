@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { UserProgressService } from './user-progress.service';
 import { CompleteMissionDto } from './dto/complete-mission.dto';
+import { CompleteMissionWithScoreDto } from './dto/complete-mission-with-score.dto';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 
 @Controller('progress')
@@ -12,6 +13,25 @@ export class UserProgressController {
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     async completeMission(@Req() req: any, @Body() completeMissionDto: CompleteMissionDto) {
         return this.userProgressService.completeMission(req.user.uid, completeMissionDto.missionId);
+    }
+
+    /**
+     * Endpoint específico para misiones cuyo puntaje no es fijo
+     * (ej. minijuegos como Food Drop). Recibe `missionId` + `score`
+     * y suma `score` al `totalPoints` del usuario, manteniendo la
+     * misma idempotencia que `complete-mission`.
+     */
+    @Post('complete-mission-with-score')
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    async completeMissionWithScore(
+        @Req() req: any,
+        @Body() dto: CompleteMissionWithScoreDto,
+    ) {
+        return this.userProgressService.completeMissionWithScore(
+            req.user.uid,
+            dto.missionId,
+            dto.score,
+        );
     }
 
     @Get('me')
