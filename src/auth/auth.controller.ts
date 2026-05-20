@@ -2,6 +2,7 @@ import { Controller, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { Get, Req, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from './guards/firebase-auth.guard';
 
@@ -20,9 +21,15 @@ export class AuthController {
     console.log('REGISTER BODY:', registerDto);
     return this.authService.register(registerDto);
   }
+  @Post('forgot-password')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
   @Get('me')
-@UseGuards(FirebaseAuthGuard)
-me(@Req() req: any) {
-  return this.authService.me(req.user.uid);
-}
+  @UseGuards(FirebaseAuthGuard)
+  me(@Req() req: any) {
+    return this.authService.me(req.user.uid);
+  }
 }

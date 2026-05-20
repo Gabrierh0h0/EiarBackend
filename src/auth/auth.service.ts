@@ -4,6 +4,7 @@ import axios from 'axios';
 import { LoginDto } from './dto/login.dto';
 import { FirebaseSignInResponse } from './dto/firebase-login-response.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
@@ -104,5 +105,33 @@ export class AuthService {
       throw new BadRequestException('No se pudo crear el usuario');
     }
     return this.login({ email, password });
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+    const apiKey = this.configService.get<string>('FIREBASE_WEB_API_KEY');
+
+    if (!apiKey) {
+      throw new BadRequestException('Configuración de Firebase incompleta');
+    }
+
+    try {
+      const resp = await axios.post(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          requestType: 'PASSWORD_RESET',
+          email,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      console.log('Firebase Reset Response:', resp.data);
+      return { message: 'Si el correo existe, se enviará un enlace de recuperación.' };
+    } catch (error: any) {
+      console.error('Firebase Reset Error:', error?.response?.data || error.message);
+      // Let's throw the error temporarily so we can see what's happening
+      throw new BadRequestException('Error enviando correo: ' + (error?.response?.data?.error?.message || 'Error desconocido'));
+    }
   }
 }
